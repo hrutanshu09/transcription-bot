@@ -115,12 +115,20 @@ def login():
     if request.method == "POST":
         phone = request.form["phone"]
         password = request.form["password"]
-        if phone == os.getenv("SUPERVISOR_PHONE") and password == os.getenv("SUPERVISOR_PASS"):
+
+        stored_phone = os.getenv("SUPERVISOR_PHONE")
+        stored_pass = os.getenv("SUPERVISOR_PASS")
+
+        if not stored_phone or not stored_pass:
+            return "Supervisor credentials not configured. Please set SUPERVISOR_PHONE and SUPERVISOR_PASS in your .env", 500
+
+        if phone == stored_phone and password == stored_pass:
             session["logged_in"] = True
             return redirect(url_for("dashboard"))
         else:
             return render_template("login.html", error="Invalid credentials.")
     return render_template("login.html")
+
 
 @app.route("/logout")
 def logout():
@@ -137,7 +145,7 @@ def dashboard():
     reports = get_pending_reports_for_supervisor(query, sort_by)
     return render_template("dashboard.html", reports=reports, query=query, sort_by=sort_by)
 
-@app.route("/submit_decision/<comm_id>", methods=["POST"])
+@app.route("/submit_decision/<int:comm_id>", methods=["POST"])
 def submit_decision(comm_id):
     if not session.get("logged_in"):
         return redirect(url_for("login"))
