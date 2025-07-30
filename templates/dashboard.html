@@ -16,17 +16,21 @@
     <button type="submit">Filter</button>
   </form>
 
-  {% for r in reports %}
-    <hr>
-    <strong>Report ID:</strong> {{ r.comm_id }}<br>
-    <strong>Account:</strong> {{ r.account_number }}<br>
-    <strong>Summary:</strong><br>
-    <pre>{{ r.summary_report }}</pre>
-    <form method="post" action="{{ url_for('submit_decision', comm_id=r.comm_id) }}">
-      <textarea name="decision" required placeholder="Write your decision..."></textarea><br>
-      <button type="submit">Submit Decision</button>
-    </form>
-  {% endfor %}
+  {% if reports %}
+    {% for r in reports %}
+      <hr>
+      <strong>Report ID:</strong> {{ r.comm_id }}<br>
+      <strong>Account:</strong> {{ r.account_number }}<br>
+      <strong>Summary:</strong><br>
+      <pre>{{ r.summary_report }}</pre>
+      <form method="post" action="{{ url_for('submit_decision', comm_id=r.comm_id) }}">
+        <textarea name="decision" required placeholder="Write your decision..."></textarea><br>
+        <button type="submit">Submit Decision</button>
+      </form>
+    {% endfor %}
+  {% else %}
+    <p>No reports found.</p>
+  {% endif %}
 
   <hr>
   <a href="{{ url_for('logout') }}">Logout</a>
