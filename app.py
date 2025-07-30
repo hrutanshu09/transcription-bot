@@ -150,3 +150,5 @@ def submit_decision(comm_id):
 
 if __name__ == "__main__":
     app.run(port=5000)
+
+#APP_SECRET=3cfaa7d10b2e4c649db02ee31f7b4a06f8bc792dd73d1efba48e11c8c5da5f71
