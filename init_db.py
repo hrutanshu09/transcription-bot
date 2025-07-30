@@ -1,10 +1,10 @@
 import sqlite3
+import bcrypt
 
 connection = sqlite3.connect('loan_recovery.db')
 cursor = connection.cursor()
 
 # --- Create tables ---
-# (agents, customers, and account_history tables remain the same)
 cursor.execute('''
 CREATE TABLE IF NOT EXISTS agents (
     whatsapp_number TEXT PRIMARY KEY,
@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS agents (
     supervisor_number TEXT
 )
 ''')
+
 cursor.execute('''
 CREATE TABLE IF NOT EXISTS customers (
     customer_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -23,6 +24,7 @@ CREATE TABLE IF NOT EXISTS customers (
     FOREIGN KEY (assigned_agent_number) REFERENCES agents(whatsapp_number)
 )
 ''')
+
 cursor.execute('''
 CREATE TABLE IF NOT EXISTS account_history (
     history_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -38,7 +40,6 @@ CREATE TABLE IF NOT EXISTS account_history (
 )
 ''')
 
-# --- NEW: Create a 'communications' table to track escalations ---
 cursor.execute('''
 CREATE TABLE IF NOT EXISTS communications (
     comm_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -51,27 +52,39 @@ CREATE TABLE IF NOT EXISTS communications (
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (account_number) REFERENCES customers(account_number),
     FOREIGN KEY (agent_number) REFERENCES agents(whatsapp_number),
-    FOREIGN KEY (supervisor_number) REFERENCES agents(whatsapp_number)
+    FOREIGN KEY (supervisor_number) REFERENCES supervisors(whatsapp_number)
 )
 ''')
 
+# --- NEW: supervisors table for login credentials ---
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS supervisors (
+    whatsapp_number TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    password TEXT NOT NULL
+)
+''')
 
 print("Tables checked/created successfully.")
 
 # --- Add sample data ---
 try:
-    # (The rest of the data insertion remains the same)
     agent1_number = 'whatsapp:+918766806290'
     agent2_number = 'whatsapp:+918149394348'
     supervisor_number = 'whatsapp:+918793217557'
 
+    # Insert agents
     agents_to_add = [
         (agent1_number, 'Aniket Kakde', supervisor_number),
         (agent2_number, 'Hrishikesh Kakde', supervisor_number),
         (supervisor_number, 'Supervisor Name', None)
     ]
-    cursor.executemany("INSERT INTO agents (whatsapp_number, agent_name, supervisor_number) VALUES (?, ?, ?)", agents_to_add)
+    cursor.executemany(
+        "INSERT INTO agents (whatsapp_number, agent_name, supervisor_number) VALUES (?, ?, ?)",
+        agents_to_add
+    )
 
+    # Insert customers
     all_customers_to_add = [
         ('Amit Sharma', 5200.00, 'ACC001', 'Mumbai', agent1_number),
         ('Priya Singh', 12000.00, 'ACC002', 'Pune', agent1_number),
@@ -80,8 +93,11 @@ try:
     ]
     cursor.executemany(
         '''INSERT INTO customers (customer_name, due_amount, account_number, location, assigned_agent_number)
-           VALUES (?, ?, ?, ?, ?)''', all_customers_to_add)
+           VALUES (?, ?, ?, ?, ?)''',
+        all_customers_to_add
+    )
 
+    # Insert account history
     history_to_add = [
         ('ACC001', 50000, 5, '2025-06-15', 'Paid,Paid,Paid,Late,Paid', 'Open', None, None),
         ('ACC002', 100000, 8, '2025-07-01', 'Paid,Paid,Paid,Paid,Paid,Late,Paid,Paid', 'Open', None, None),
@@ -90,8 +106,18 @@ try:
     ]
     cursor.executemany(
         '''INSERT INTO account_history (account_number, total_loan, emis_paid, last_payment_date, payment_record, status, agent_notes, supervisor_decision)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)''', history_to_add)
-    
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
+        history_to_add
+    )
+
+    # Insert supervisor with hashed password
+    password_plain = "supervisor123"
+    hashed_pw = bcrypt.hashpw(password_plain.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+    cursor.execute(
+        "INSERT INTO supervisors (whatsapp_number, name, password) VALUES (?, ?, ?)",
+        (supervisor_number, "Alice Sharma", hashed_pw)
+    )
+
     print("Sample data added successfully.")
 except sqlite3.IntegrityError:
     print("Sample data already exists, skipping insertion.")
